@@ -61,6 +61,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     'VN': { name: 'Vietnam', flag: '🇻🇳', aliases: ['vn', 'vietnam'] }
   };
 
+  // Qualifier Cutoff Limits for Special Years (Default is 10)
+  const QUALIFIER_LIMITS = {
+    '2025Q': { displayLimit: 12, rowCount: 12 },
+    '2026Q': { displayLimit: 10, rowCount: 11 }
+  };
+
   // State Management
   const state = {
     allYears: [],          // Unique years list: ['2020', '2021', ..., '2026']
@@ -251,7 +257,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const parts = line.split('\t').map(p => p.trim());
       if (parts.length < minRequiredLength) continue;
 
-      const rank = parts[rankIdx];
+      let rank = parts[rankIdx];
+      // Special case: 2026Q rank 11 tied with rank 10, both should be rank 10
+      if (year === '2026' && stage === 'Q' && rank === '11') {
+        rank = '10';
+      }
       const team = parts[teamIdx];
       const time = (timeIdx !== -1 && parts.length > timeIdx) ? parts[timeIdx] : '';
       const rawNat = (natIdx !== -1 && parts.length > natIdx) ? parts[natIdx] : '';
@@ -474,9 +484,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // which naturally handles years like 2024F and 2025F (12 teams) dynamically.
     const showAll = activeTeams.length <= 15;
 
+    // Get the limit of teams to show for this event
+    const eventLimits = selectedEvent.endsWith('Q') 
+      ? (QUALIFIER_LIMITS[selectedEvent] || { displayLimit: 10, rowCount: 10 }) 
+      : { displayLimit: 10, rowCount: 10 };
+
+    const displayLimit = typeof eventLimits === 'object' ? eventLimits.displayLimit : eventLimits;
+    const rowCount = typeof eventLimits === 'object' ? eventLimits.rowCount : eventLimits;
+
     let titleText = showAll 
       ? `${yearPart} ${stagePart} Rankings` 
-      : `${yearPart} ${stagePart} Top 10 Teams`;
+      : `${yearPart} ${stagePart} Top ${displayLimit} Teams`;
       
     if (state.activeCountryFilter) {
       const countryInfo = countryDetails[state.activeCountryFilter];
@@ -491,7 +509,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render filter badge if active
     renderFilterBadge();
 
-    const maxCount = (showAll || state.activeCountryFilter) ? activeTeams.length : 10;
+    const maxCount = (showAll || state.activeCountryFilter) ? activeTeams.length : rowCount;
     const topTeams = activeTeams.slice(0, maxCount);
 
     leaderboardBody.innerHTML = '';
