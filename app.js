@@ -4,23 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Configured TSV Data Files
-  const tsvFiles = [
-    { year: '2020', stage: 'Q', url: 'data/2020Q.tsv' },
-    { year: '2020', stage: 'F', url: 'data/2020F.tsv' },
-    { year: '2021', stage: 'Q', url: 'data/2021Q.tsv' },
-    { year: '2021', stage: 'F', url: 'data/2021F.tsv' },
-    { year: '2022', stage: 'Q', url: 'data/2022Q.tsv' },
-    { year: '2022', stage: 'F', url: 'data/2022F.tsv' },
-    { year: '2023', stage: 'Q', url: 'data/2023Q.tsv' },
-    { year: '2023', stage: 'F', url: 'data/2023F.tsv' },
-    { year: '2024', stage: 'Q', url: 'data/2024Q.tsv' },
-    { year: '2024', stage: 'F', url: 'data/2024F.tsv' },
-    { year: '2025', stage: 'Q', url: 'data/2025Q.tsv' },
-    { year: '2025', stage: 'F', url: 'data/2025F.tsv' },
-    { year: '2026', stage: 'Q', url: 'data/2026Q.tsv' }
-  ];
-
   // Country Details Dictionary for Search & Normalization
   const countryDetails = {
     'AM': { name: 'Armenia', flag: '🇦🇲', aliases: ['am', 'armenia'] },
@@ -144,32 +127,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fetch and compile raw data from TSV files
   async function loadAndCompileData() {
+    // 1. Dynamically discover existing TSV files by probing (from 2020 to current year + 2)
+    const startYear = 2020;
+    const endYear = new Date().getFullYear() + 2;
+    const candidates = [];
+    for (let y = startYear; y <= endYear; y++) {
+      candidates.push({ year: String(y), stage: 'Q', url: `data/${y}Q.tsv` });
+      candidates.push({ year: String(y), stage: 'F', url: `data/${y}F.tsv` });
+    }
+
+    const activeFiles = [];
+    const probePromises = candidates.map(async (candidate) => {
+      try {
+        const response = await fetch(candidate.url);
+        if (response.ok) {
+          const text = await response.text();
+          activeFiles.push({ ...candidate, text });
+        }
+      } catch (err) {
+        // Ignore failures (404s)
+      }
+    });
+
+    await Promise.all(probePromises);
+
+    if (activeFiles.length === 0) {
+      throw new Error("No data was parsed from the TSV files.");
+    }
+
     const rawData = [];
     const teamNameCounts = {};     // lower_name -> { exact_name: count }
     const teamNationalities = {};   // lower_name -> { nationality: count }
     const yearSet = new Set();
     const eventSet = new Set();
 
-    // Fetch all files in parallel
-    const fetchPromises = tsvFiles.map(async (fileInfo) => {
-      try {
-        const response = await fetch(fileInfo.url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const text = await response.text();
-        parseTsvText(text, fileInfo.year, fileInfo.stage, rawData, teamNameCounts, teamNationalities, yearSet, eventSet);
-      } catch (err) {
-        console.warn(`Could not load TSV file: ${fileInfo.url}. Error:`, err);
-        // Rethrow only if we load absolutely nothing
-      }
+    activeFiles.forEach(fileInfo => {
+      parseTsvText(fileInfo.text, fileInfo.year, fileInfo.stage, rawData, teamNameCounts, teamNationalities, yearSet, eventSet);
     });
-
-    await Promise.all(fetchPromises);
-
-    if (rawData.length === 0) {
-      throw new Error("No data was parsed from the TSV files.");
-    }
 
     // Step 2: Determine canonical names and nationalities
     const canonicalNames = {};
@@ -440,25 +434,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedEvent = state.currentEvent;
     const yearPart = selectedEvent.slice(0, 4);
     const stagePart = selectedEvent.slice(4) === 'Q' ? 'Qualifiers (Q)' : 'Finals (F)';
-    
-    const showAll = (selectedEvent === '2024F' || selectedEvent === '2025F');
-    
-    let titleText = showAll 
-      ? `${yearPart} ${stagePart} Rankings` 
-      : `${yearPart} ${stagePart} Top 10 Teams`;
-      
-    if (state.activeCountryFilter) {
-      const countryInfo = countryDetails[state.activeCountryFilter];
-      const countryLabel = countryInfo ? countryInfo.name : state.activeCountryFilter;
-      const countryTeams = Object.values(state.teams).filter(t => t.nationality === state.activeCountryFilter);
-      const totalCountryTeams = countryTeams.length;
-      const currentEventTeams = countryTeams.filter(t => t.history[selectedEvent]).length;
-      titleText = `${yearPart} ${stagePart} - Teams from ${countryLabel} (${currentEventTeams}/${totalCountryTeams})`;
-    }
-    tableTitle.textContent = titleText;
-
-    // Render filter badge if active
-    renderFilterBadge();
 
     const activeTeams = [];
     Object.values(state.teams).forEach(team => {
@@ -494,6 +469,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       return a.team.name.localeCompare(b.team.name);
     });
+
+    // Automatically show all teams if the total count is small (e.g. <= 15),
+    // which naturally handles years like 2024F and 2025F (12 teams) dynamically.
+    const showAll = activeTeams.length <= 15;
+
+    let titleText = showAll 
+      ? `${yearPart} ${stagePart} Rankings` 
+      : `${yearPart} ${stagePart} Top 10 Teams`;
+      
+    if (state.activeCountryFilter) {
+      const countryInfo = countryDetails[state.activeCountryFilter];
+      const countryLabel = countryInfo ? countryInfo.name : state.activeCountryFilter;
+      const countryTeams = Object.values(state.teams).filter(t => t.nationality === state.activeCountryFilter);
+      const totalCountryTeams = countryTeams.length;
+      const currentEventTeams = countryTeams.filter(t => t.history[selectedEvent]).length;
+      titleText = `${yearPart} ${stagePart} - Teams from ${countryLabel} (${currentEventTeams}/${totalCountryTeams})`;
+    }
+    tableTitle.textContent = titleText;
+
+    // Render filter badge if active
+    renderFilterBadge();
+
     const maxCount = (showAll || state.activeCountryFilter) ? activeTeams.length : 10;
     const topTeams = activeTeams.slice(0, maxCount);
 
