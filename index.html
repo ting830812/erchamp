@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ERchamp Historical Team Rankings</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar / Brand section -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div>
+          <h1>ERCHAMP</h1>
+          <p class="subtitle">Historical Team Database</p>
+        </div>
+      </div>
+      
+      <!-- Stats Summary Widget -->
+      <div class="header-stats">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total-teams">-</div>
+          <div class="stat-label">Registered Teams</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total-years">-</div>
+          <div class="stat-label">Years Covered</div>
+        </div>
+      </div>
+      
+      <!-- Search Box in Header -->
+      <div class="search-wrapper">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="search-input" placeholder="Search team names or countries..." autocomplete="off">
+        <button id="clear-search-btn" class="clear-btn" style="display: none;">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        
+        <!-- Search Results Dropdown -->
+        <div id="search-dropdown" class="search-dropdown" style="display: none;">
+          <div class="dropdown-header">Search Results</div>
+          <ul id="search-results-list">
+            <!-- Dynamic results -->
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Dashboard Top Section: Selector and Title -->
+      <section class="dashboard-controls">
+        <div class="section-title-group">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <h2 id="table-title" style="margin: 0;">Top 10 Teams</h2>
+            <div id="filter-badge-container"></div>
+          </div>
+          <p class="section-subtitle">Click any team to view their detailed performance and progression chart</p>
+        </div>
+        
+        <!-- Year & Stage Selector -->
+        <div class="event-selector">
+          <label for="event-select"><i class="fa-solid fa-calendar-days"></i> Reference Event:</label>
+          <div class="select-wrapper">
+            <select id="event-select">
+              <!-- Dynamically populated options, e.g., 2026Q, 2025F, etc. -->
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Leaderboard Card -->
+      <div class="card leaderboard-card">
+        <div class="table-responsive">
+          <table class="leaderboard-table" id="leaderboard-table">
+            <thead>
+              <tr>
+                <th class="col-rank">Rank</th>
+                <th class="col-team">Team Name</th>
+                <!-- Historical Year Columns will be generated dynamically -->
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Empty state / No team selected warning for the detail panel -->
+      <div class="detail-grid">
+        <!-- Team Profile Details Section (Hidden by default or shows instruction) -->
+        <section id="team-profile-section" class="card team-profile-card" style="display: none;">
+          <button class="close-profile-btn" id="close-profile-btn">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          
+          <div class="profile-header">
+            <div class="profile-title-row">
+              <span id="profile-flag" class="profile-flag">🇺🇸</span>
+              <h3 id="profile-team-name">Team Name</h3>
+            </div>
+            <div class="profile-subtitle">
+              <span id="profile-nationality-text">Country: US</span>
+              <span class="separator">•</span>
+              <span id="profile-active-years">Active Years: 2022 - 2026</span>
+            </div>
+          </div>
+          
+          <!-- Key stats row -->
+          <div class="profile-stats-grid">
+            <div class="p-stat-card">
+              <div class="p-stat-value" id="profile-best-f">-</div>
+              <div class="p-stat-label">Best Finals Rank (F)</div>
+            </div>
+            <div class="p-stat-card">
+              <div class="p-stat-value" id="profile-best-q">-</div>
+              <div class="p-stat-label">Best Qualifiers Rank (Q)</div>
+            </div>
+            <div class="p-stat-card">
+              <div class="p-stat-value" id="profile-total-entries">-</div>
+              <div class="p-stat-label">Participations</div>
+            </div>
+          </div>
+          
+          <!-- Chart & History Grid -->
+          <div class="profile-body">
+            <!-- Left: Rank Progression Chart -->
+            <div class="chart-container">
+              <h4 class="box-title"><i class="fa-solid fa-chart-line"></i> Rank Progression (Chart)</h4>
+              <div class="chart-wrapper">
+                <svg id="rank-chart" viewBox="0 0 600 240" preserveAspectRatio="none">
+                  <!-- Dynamic SVG elements (lines, points, axes, labels) -->
+                </svg>
+                <div id="chart-tooltip" class="chart-tooltip" style="display: none;"></div>
+              </div>
+            </div>
+            
+            <!-- Right: Timeline detail -->
+            <div class="history-list-container">
+              <h4 class="box-title"><i class="fa-solid fa-clock-rotate-left"></i> Event History</h4>
+              <div class="timeline" id="profile-timeline">
+                <!-- Dynamic timeline items -->
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <div id="profile-placeholder" class="card placeholder-card">
+          <i class="fa-solid fa-circle-info placeholder-icon"></i>
+          <h3>Select a team from the table or search above</h3>
+          <p>to view their historical standings and progression charts</p>
+        </div>
+      </div>
+      
+    </main>
+    
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p class="disclaimer">Disclaimer: All data is unofficial. Please refer to <a href="https://erchamp.com" target="_blank" rel="noopener">erchamp.com</a> for official announcements.</p>
+    </footer>
+  </div>
+
+  <!-- Global Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner-container">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading & parsing competition data...</p>
+    </div>
+  </div>
+
+  <!-- Load App Logic directly (app.js will fetch and parse TSVs) -->
+  <script src="app.js"></script>
+</body>
+</html>
